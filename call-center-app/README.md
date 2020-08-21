@@ -5,7 +5,7 @@ consumption of the cloud provider's resources that Astra based applications
 would consume.
 
 ## HLA
-![](call-center-app/Images/Call_Centre_App-HLA.png)
+![](Images/Call_Centre_App-HLA.png)
 
 
 ## How is this different than using Dynamodb, BigTable, Cosmos
