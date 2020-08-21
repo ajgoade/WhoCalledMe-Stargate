@@ -35,7 +35,12 @@ while True:
 response = requests.get(status['TranscriptionJob']['Transcript']['TranscriptFileUri']).json()
 transcript = response['results']['transcripts'][0]['transcript']
 
+# Updating Astra Tables
+
 call_id = jobname.split("_")[0]
 session.execute(f'update demo_callcentre.call_centre_voice_source set last_updated=%s, transcript=%s, process_status=%s where call_id={call_id}',(datetime.now(),transcript,'Processed'))
+
+job_id = "'"+jobname+"'"
+session.execute(f'update demo_callcentre.job_status set last_update_time=%s, status=%s where job_id={job_id}',(datetime.now(),'completed'))
 
 print("Job Processed")
