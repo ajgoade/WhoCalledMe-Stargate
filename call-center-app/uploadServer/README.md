@@ -15,3 +15,9 @@ Should be two separate services, the login service should
 return a JWT and the uploader should validate JWT.  We 
 don't do that right now.
 
+# GCP Cloud Storage hints
+
+I used https://cloud.google.com/storage/docs/reference/libraries?hl=en_US#client-libraries-install-nodejs
+
+I created a project
+I created a cloud storage services account - call-center-app-*.json
