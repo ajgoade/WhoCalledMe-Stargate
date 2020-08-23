@@ -2,9 +2,15 @@ let express = require('express');
 let userService = require('../lib/users');
 let router = express.Router();
 
+
+function validUser(req, res) {
+    res.status(200).send("Valid user");
+}
 /* GET users listing. */
 router.get('/', function(req, res, next) {
-  res.send('respond with a resource');
+
+    userService.authenticateToken(req, res, validUser);
+
 });
 
 router.post('/', function(req,res, next) {
@@ -17,7 +23,11 @@ router.post('/', function(req,res, next) {
 
   userService.loginSucceeded(userID, pwd)
       .then((retData) => {
-        res.send('Login succeeded');
+          if (retData.errCode != 0) {
+              res.status(401).send('Login failed');
+          }
+
+        res.status(200).send(retData.jwt);
 
       }).catch((retData) => {
 
