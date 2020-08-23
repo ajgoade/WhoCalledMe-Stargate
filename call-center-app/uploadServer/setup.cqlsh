@@ -1,0 +1,11 @@
+CREATE TABLE users (
+
+username text,
+password text,
+userid uuid,
+
+PRIMARY KEY(username)
+);
+
+
+INSERT INTO call_center_app.users (userid, username, password) VALUES (uuid(), 'demo1', 'demo1PwdIsGood');
