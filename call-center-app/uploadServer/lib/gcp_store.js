@@ -10,7 +10,7 @@ const {Storage} = require('@google-cloud/storage');
 // Creates a client
 const storage = new Storage();
 
-async function uploadFile() {
+async function uploadFile(filename, bucketName) {
     // Uploads a local file to the bucket
     await storage.bucket(bucketName).upload(filename, {
         // Support for HTTP requests made with `Accept-Encoding: gzip`
@@ -32,7 +32,7 @@ async function uploadFile() {
 let gcp_storage_service;
 gcp_storage_service = {
     uploadFile: function (filePath, bucketName) {
-        return uploadFile()
+        return uploadFile(filePath, bucketName)
             .then((retData) => {
                 return true;
             })
