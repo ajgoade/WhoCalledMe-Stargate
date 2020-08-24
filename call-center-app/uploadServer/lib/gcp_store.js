@@ -2,7 +2,7 @@
  * Sample program from https://cloud.google.com/storage/docs/uploading-objects#storage-upload-object-code-sample
  */
 const bucketName = 'call-center-inbound';
-const filename = './package.json';
+const filename = './sample__audio_files/YouKnowNothingJonSnow.m4a';
 
 // Imports the Google Cloud client library
 const {Storage} = require('@google-cloud/storage');
@@ -32,7 +32,14 @@ async function uploadFile() {
 let gcp_storage_service;
 gcp_storage_service = {
     uploadFile: function (filePath, bucketName) {
-        uploadFile().catch(console.error);
+        return uploadFile()
+            .then((retData) => {
+                return true;
+            })
+            .catch((retData) => {
+                console.error(retData);
+                return false;
+            });
 
     },
 
