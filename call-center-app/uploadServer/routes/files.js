@@ -4,6 +4,8 @@ let router = express.Router();
 let fileService = require('../lib/gcp_store');
 let userService = require('../lib/users');
 
+let uploadsDir = process.env.UPLOAD_DIR + '/';
+
 function uploadFile(req, res, file2Upload) {
     fileService.uploadFile(file2Upload, "call-center-inbound")
         .then((retData) => {
@@ -25,19 +27,13 @@ function acceptFileFromUser(req, res) {
             let file2Upload = req.files.audio_message;
 
             //Use the mv() method to place the file in upload directory (i.e. "uploads")
-            file2Upload.mv('./uploads/' + file2Upload.name);
-
-            uploadFile(req, res, './uploads/' + file2Upload.name);
-            // //send response
-            // res.send({
-            //     status: true,
-            //     message: 'File is uploaded',
-            //     data: {
-            //         name: file2Upload.name,
-            //         mimetype: file2Upload.mimetype,
-            //         size: file2Upload.size
-            //     }
-            // });
+            file2Upload.mv(uploadsDir + file2Upload.name)
+                .then((retData) => {
+                    uploadFile(req, res, uploadsDir + file2Upload.name);
+                }).catch((errData) => {
+                    console.error(errData);
+                    res.status(500).send(errData);
+            })
 
         }
     } catch (err) {

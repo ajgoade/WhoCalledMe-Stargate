@@ -15,9 +15,17 @@ Should be two separate services, the login service should
 return a JWT and the uploader should validate JWT.  We 
 don't do that right now.
 
+## Usage
+
+
 # GCP Cloud Storage hints
 
 I used https://cloud.google.com/storage/docs/reference/libraries?hl=en_US#client-libraries-install-nodejs
 
 I created a project
 I created a cloud storage services account - call-center-app-*.json
+
+1. Source - I used the file under the PostmanAPI dir to get a token and upload a file .
+2. Dest - Uploads to Rajeev's personal GCP console system
+3. Astra - TBD TBD TBD TODO TODO
+ 
