@@ -6,7 +6,8 @@ CREATE TABLE callcenter.call_center_voice_source (
     call_link text,
     last_updated timestamp,
     process_status text,
-    transcript text
+    transcript text,
+    sentiment text
 ) WITH additional_write_policy = '99PERCENTILE'
     AND bloom_filter_fp_chance = 0.01
     AND caching = {'keys': 'ALL', 'rows_per_partition': 'NONE'}
