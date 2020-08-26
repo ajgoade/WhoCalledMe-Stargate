@@ -1,10 +1,7 @@
 #import pdb
 import threading
 import time
-# from t1 import ttest
-# from transcribe_job import create_job
 from datetime import datetime
-# from get_transcript import get_job_status
 # from pydub import AudioSegment
 from os import environ
 
@@ -12,7 +9,6 @@ from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
 from google.cloud import speech
 from google.cloud.speech import types
-
 # from google.cloud import storage
 
 global mediafileurl
@@ -68,7 +64,40 @@ def google_transcribe(audio_file_name, jobid):
     auth_provider = PlainTextAuthProvider('callcenter', 'datastax')
     cluster = Cluster(cloud=cloud_config, auth_provider=auth_provider)
     session = cluster.connect()
-    session.execute(f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s, transcript=%s where call_id={jobid}', (datetime.utcnow(), 'complete', transcript))
+    session.execute(f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s, transcript=%s where call_id={jobid}', (datetime.utcnow(), 'sentiment_needed', transcript))
+
+    threading.Thread(target=google_sentiment, args=(jobid, transcript)).start()
+
+    session.shutdown()
+
+
+def google_sentiment(jobid, transcript):
+    from google.cloud import language
+    from google.cloud.language import enums
+    from google.cloud.language import types
+
+    client = language.LanguageServiceClient()
+
+    document = types.Document(
+        content=transcript,
+        type=enums.Document.Type.PLAIN_TEXT)
+
+    annotations = client.analyze_sentiment(document=document)
+
+    score = annotations.document_sentiment.score
+    magnitude = annotations.document_sentiment.magnitude
+
+    final_sentiment = 'Overall Sentiment: score of {:+.2f} with magnitude of {:+.2f}'.format(
+        score, magnitude)
+
+    # print("Writing transcript results for "+str(jobid)+" .....")
+    cloud_config = {'secure_connect_bundle': secureconnect}
+    auth_provider = PlainTextAuthProvider('callcenter', 'datastax')
+    cluster = Cluster(cloud=cloud_config, auth_provider=auth_provider)
+    session = cluster.connect()
+    session.execute(
+        f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s, sentiment=%s where call_id={jobid}',
+        (datetime.utcnow(), 'complete', final_sentiment))
 
     session.shutdown()
 
@@ -83,7 +112,7 @@ def get_transactions():
     cluster = Cluster(cloud=cloud_config, auth_provider=auth_provider)
     session = cluster.connect()
 
-    # Load records to be processed
+    # Load records to be transcribed
     #print("Reading Data from Astra .....")
     rows = session.execute(
         "select call_id, call_link from callcenter.call_center_voice_source where process_status='new'")
@@ -96,8 +125,8 @@ def get_transactions():
         threading.Thread(target=google_transcribe,args=(mediafileurl, jobid)).start()
 
         #print("Job scheduled "+str(jobid)+" .....")
-        session.execute(f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s where call_id={jobid}',(datetime.utcnow(),'scheduled'))
-    
+        session.execute(f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s where call_id={jobid}',(datetime.utcnow(),'transcribe_scheduled'))
+
     session.shutdown()
 
 
