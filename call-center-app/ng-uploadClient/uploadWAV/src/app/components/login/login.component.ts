@@ -3,6 +3,7 @@ import { FormControl } from '@angular/forms';
 import {AuthService} from "../../services/authService/auth.service";
 import {TokenStorageService} from "../../services/tokenStorage/token-storage.service";
 import {Router} from "@angular/router";
+import {UserService} from "../../services/user/user.service";
 
 @Component({
   selector: 'app-login',
@@ -19,7 +20,8 @@ export class LoginComponent implements OnInit {
 
   constructor(private authService: AuthService,
               private tokenStorageService: TokenStorageService,
-              private router: Router) { }
+              private router: Router,
+              private userService: UserService) { }
 
   ngOnInit(): void {
     this.user = new FormControl('');
@@ -32,8 +34,11 @@ export class LoginComponent implements OnInit {
     this.authService.login({username:this.user.value, password:this.password.value})
       .subscribe((result) => {
 
-        console.log(result);
-        this.tokenStorageService.storeToken(result.body);
+        console.log(result.body);
+        console.log("jwt|" + result.jwt);
+        this.tokenStorageService.storeToken(result.jwt);
+
+        this.userService.setUserName(this.user.value);
 
         this.loginSucceeded();
       }, (errData) => {
