@@ -3,19 +3,24 @@ let express = require('express');
 let path = require('path');
 let cookieParser = require('cookie-parser');
 let logger = require('morgan');
-let fileUpload = require ('express-fileupload')
+let fileUpload = require ('express-fileupload');
+let cors = require('cors');
+
 
 let indexRouter = require('./routes/index');
 let usersRouter = require('./routes/users');
 let filesRouter = require('./routes/files');
 
 let app = express();
+app.use(cors());
 app.use(fileUpload({
   createParentPath: true,
   limits: {
     fileSize: 20 * 1024 * 1024 * 1024 //20 MB max file(s) size
   },
 }));
+
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');

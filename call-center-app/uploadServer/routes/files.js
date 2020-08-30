@@ -18,7 +18,7 @@ function uploadFile(req, res, file2Upload) {
 function acceptFileFromUser(req, res) {
     try {
         if(!req.files) {
-            res.send({
+            res.status(400).send({
                 status: false,
                 message: 'No file uploaded'
             });
