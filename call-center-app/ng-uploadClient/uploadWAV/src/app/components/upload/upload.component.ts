@@ -48,12 +48,12 @@ export class UploadComponent implements OnInit {
    * Will be called automatically.
    */
   successCallback(stream) {
-    var options = {
+    let options = {
       mimeType: "audio/wav",
       numberOfAudioChannels: 1,
-      sampleRate: 16000,
-    };//Start Actuall Recording
-    var StereoAudioRecorder = RecordRTC.StereoAudioRecorder;
+      desiredSampRate: 16000,
+    };//Start Actual Recording
+    let StereoAudioRecorder = RecordRTC.StereoAudioRecorder;
     this.record = new StereoAudioRecorder(stream, options);
     this.record.record();
   }
@@ -77,7 +77,7 @@ export class UploadComponent implements OnInit {
 
 
     this.uploadService.uploadFile(blob, this.userService.getUserName(),
-      moment.now() + '-' + this.userService.getUserName() )
+      moment.now() + '-' + this.userService.getUserName() + '.wav')
       .subscribe((retData) => {
           console.log('upload completed');
           console.log(retData);
