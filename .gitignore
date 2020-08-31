@@ -1,2 +1,3 @@
 *.zip
 *.DS_Store
+/astra_demos/call-center-app/gcp-files/*.json
