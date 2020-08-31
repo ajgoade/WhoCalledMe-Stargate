@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "call-center-app-287323",
+  "private_key_id": "df2f0b1c485197dea3b251d8b1ff5197c7b3b957",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDAqwdhld0aUAx1\n6aeznEl5G/qedmCBPxtp3s5EcWe073ucqplGHuJabNAFsD9x72jSpOPaKW5KzVrO\nT3nJyApFz1OhPZRHHpMdgutgDTclKPvTXz0Kk4ltMx1Ek9tk1Heemynm0HZ27ymb\nIx9Y+sX9W9xjGTwYGawt5C46T5IixQW1Gx00Ib1tRpPFyY8PGPHJxnuMyt+wdRp7\nkHBGPJ3oQYxHntCeSSt5TRx/6z+MPRnl33uqJ0NYiimgmQ7KXFhOiExrZi/T5iqC\nweVyfVp+AWzUUY9gSH9KskdGt42Tes88j5otrAUDxxNw8V8lefQWNQiOeHY8bCBq\nd/XwXbSXAgMBAAECggEAPeX0jh52lWCIUE2L6kFYvYcGomhHot5icUX6oLSKa+/Q\nl8mbSpLbh8+TmXBBQdp3o80DwvAyleeZt9SCvRf+bOUp6hB9lce13fJUqlw0jkS3\nevYLB13U9fdI/OI/xwoXkCYrdRMeLCG0DTpgdNbESxx7Fn9h9iAxV+EKFQPBYFe7\nNp6NIDRDi4G9qe1PC5K7zTewSpMUN2ScvuRLz2TftfbIJ32OlMAy7R4HLPgxVPU9\nu1eWP22F4z5Rpz6OiXGGbYbNfZgbBeHLh13TDkXXUZrR2YnywSFsgsd3iiAMCjGX\nyLYVUHuyI9fthCBcWvAr+gO6lgflKEdf4X2Rpqig+QKBgQDkZh5QuWqCX5ag/beR\npxuRmHqmM0fvLD6Bouo8WbUtLLQHpndsQUSsmFzOu6IA3V5qTAIiDTVUdaGTuNCF\n+vSNVl1wJgngiFJrKcZPeQcbhSbgTpKjK/5JTRubpFkSNAt7XmlS4dvPX1NqFnPT\nRTyzAryPQlruXYKammdP4suYOwKBgQDX84VeGzR3tzYtdo8jlfO6ufDt5Q01xCt1\nQ5V55pAh7B7cZjyVa3C8VjJ0kKG7UcOmH1N55ODYsAKOwu2PY1OccAx5zjX9im1k\n5caCHkRv4X7LWpjmKRPUZyZrBzreBmbUOQZWY+lezhHp9rr3SBqjvbgnRzKJ3/ON\nOBCDX7LrVQKBgF26AkrCLBEgROH//CrLVqbi2cIGXUiq8WOlhVYKwiytoZtaFrvX\n9OSXCc7UdODB9xLL6jwrC22DcDD8sKWqnFy7ylBRa9A2YQwU8op+cgo7E/8Mf2Ry\nk0FlYST3xo2Pyf5weexHPzrUNZjdad6TFRuozdREOKiEuynSnv7LZR0tAoGBAKd1\nC0KCThlXVQfEHBM4QJvXfGC9cZTz3c887Tht9e6YLwYxsWEcw3sITG/fh8q+CL1V\nJWIsfb8KHbGerqC2ISv6J3J82ZkWMuY+18QmvGMVtUDzrAUubVYT9tKf9KIezLZc\n0fFD4L/HhFStIyaGH0JB5/9tUl9f7njftM5q809RAoGBAKGNdzyLQLHwFqYTo6c/\ne9UQRus8KHAzQd5aR/IlDoSGEpUA+zQTTpWps9DRcM0RqPYu+HX7rTYdU0dafQfs\noa7sGmoeYAxXifhXVwjk/6s8fYVkWBD4loXfBfPqBPpJBvPbKDJ8/TWwUaB6L7DN\n6JP5vLFWsJDb5EUnxJraGR3+\n-----END PRIVATE KEY-----\n",
+  "client_email": "call-center-cloudstore-admin@call-center-app-287323.iam.gserviceaccount.com",
+  "client_id": "100519270458252752691",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/call-center-cloudstore-admin%40call-center-app-287323.iam.gserviceaccount.com"
+}
