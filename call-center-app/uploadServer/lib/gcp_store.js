@@ -14,7 +14,7 @@ async function uploadFile(filename, bucketName) {
     // Uploads a local file to the bucket
     await storage.bucket(bucketName).upload(filename, {
         // Support for HTTP requests made with `Accept-Encoding: gzip`
-        gzip: true,
+        // gzip: true, --20200831 - ajgoade - Removed - Causing files to be unreadable
         // By setting the option `destination`, you can change the name of the
         // object you are uploading to a bucket.
         metadata: {
