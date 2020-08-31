@@ -27,7 +27,7 @@ router.post('/', function(req,res, next) {
               res.status(401).send('Login failed');
           }
 
-        res.status(200).send(retData.jwt);
+        res.status(200).send(retData);
 
       }).catch((retData) => {
 

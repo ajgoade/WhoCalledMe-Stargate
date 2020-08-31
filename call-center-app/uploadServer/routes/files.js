@@ -7,7 +7,7 @@ let userService = require('../lib/users');
 let uploadsDir = process.env.UPLOAD_DIR + '/';
 
 function uploadFile(req, res, file2Upload) {
-    fileService.uploadFile(file2Upload, "call-center-inbound")
+    fileService.uploadFile(file2Upload, "astra_call_center")
         .then((retData) => {
             res.status(200).send("File uploaded");
         }).catch((errData=>{
@@ -18,7 +18,7 @@ function uploadFile(req, res, file2Upload) {
 function acceptFileFromUser(req, res) {
     try {
         if(!req.files) {
-            res.send({
+            res.status(400).send({
                 status: false,
                 message: 'No file uploaded'
             });

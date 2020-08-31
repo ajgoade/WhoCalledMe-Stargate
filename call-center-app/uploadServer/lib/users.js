@@ -52,7 +52,7 @@ users = {
     loginSucceeded: function (username, pwd) {
         // console.debug('look for|user=' + username + '|pwd=' + pwd);
 
-        let cql = 'SELECT * FROM call_center_app.users where ' +
+        let cql = 'SELECT * FROM callcenter.users where ' +
             "username='" + username + "' " +
         " AND " +
         "password='" + pwd + "' ";
