@@ -1,7 +1,7 @@
 /**
  * Sample program from https://cloud.google.com/storage/docs/uploading-objects#storage-upload-object-code-sample
  */
-const bucketName = 'call-center-inbound';
+const bucketName = 'astra_call_center';
 const filename = './sample__audio_files/YouKnowNothingJonSnow.m4a';
 
 // Imports the Google Cloud client library
