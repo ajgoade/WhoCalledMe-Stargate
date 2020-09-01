@@ -14,6 +14,7 @@ from google.cloud.speech import types
 #Amazon imports
 import boto3
 import requests
+import json
 
 global mediafileurl
 global mediaformat
@@ -69,7 +70,7 @@ def google_transcribe(audio_file_name, jobid):
     auth_provider = PlainTextAuthProvider('callcenter', 'datastax')
     cluster = Cluster(cloud=cloud_config, auth_provider=auth_provider)
     session = cluster.connect()
-    session.execute(f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s, transcript=%s where call_id={jobid}', (datetime.utcnow(), 'sentiment_needed', transcript))
+    session.execute(f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s, transcript=%s where call_id={jobid}', (datetime.utcnow(), 'gcp_sentiment_needed', transcript))
 
     threading.Thread(target=google_sentiment, args=(jobid, transcript)).start()
 
@@ -102,7 +103,7 @@ def google_sentiment(jobid, transcript):
     session = cluster.connect()
     session.execute(
         f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s, sentiment=%s where call_id={jobid}',
-        (datetime.utcnow(), 'complete', final_sentiment))
+        (datetime.utcnow(), 'gcp_complete', final_sentiment))
 
     session.shutdown()
 
@@ -134,31 +135,21 @@ def amazon_transcribe(audio_file_name, jobid):
     session = cluster.connect()
     session.execute(
         f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s, transcript=%s where call_id={jobid}',
-        (datetime.utcnow(), 'aws_complete', transcript))
+        (datetime.utcnow(), 'aws_sentiment_needed', transcript))
 
-    #threading.Thread(target=amazon_sentiment, args=(jobid, transcript)).start()
+    threading.Thread(target=amazon_sentiment, args=(jobid, transcript)).start()
 
     session.shutdown()
 
 
 def amazon_sentiment(jobid, transcript):
-    from google.cloud import language
-    from google.cloud.language import enums
-    from google.cloud.language import types
 
-    client = language.LanguageServiceClient()
+    comprehend = boto3.client(service_name='comprehend', region_name='us-east-1')
 
-    document = types.Document(
-        content=transcript,
-        type=enums.Document.Type.PLAIN_TEXT)
+    results = comprehend.detect_sentiment(Text=transcript, LanguageCode='en')
 
-    annotations = client.analyze_sentiment(document=document)
-
-    score = annotations.document_sentiment.score
-    magnitude = annotations.document_sentiment.magnitude
-
-    final_sentiment = 'Overall Sentiment: score of {:+.2f} with magnitude of {:+.2f}'.format(
-        score, magnitude)
+    final_sentiment = 'Overall Sentiment is {}: Scores are Positive {:+.2f}, Negative {:+.2f}, Neutral {:+.2f}, and Mixed {:+.2f}'.format(
+        results['Sentiment'], results['SentimentScore']['Positive'], results['SentimentScore']['Negative'], results['SentimentScore']['Neutral'], results['SentimentScore']['Mixed'])
 
     # print("Writing transcript results for "+str(jobid)+" .....")
     cloud_config = {'secure_connect_bundle': secureconnect}
