@@ -110,13 +110,14 @@ def google_sentiment(jobid, transcript):
 def amazon_transcribe(audio_file_name, jobid):
     aws_uri = audio_file_name
     transcript = ''
+    jobname = str(jobid)+'_'+datetime.utcnow().strftime('%Y-%m-%d-%H:%M:%S.%f')[:-3]
 
     transcribe_client = boto3.client('transcribe',  region_name='us-east-1')
-    transcribe_client.start_transcription_job(TranscriptionJobName=jobid, Media={'MediaFileUri': aws_uri},
+    transcribe_client.start_transcription_job(TranscriptionJobName=jobname, Media={'MediaFileUri': aws_uri},
                                        MediaFormat='wav', LanguageCode='en-US')
 
     while True:
-        status = transcribe_client.get_transcription_job(TranscriptionJobName=jobid)
+        status = transcribe_client.get_transcription_job(TranscriptionJobName=jobname)
         if status['TranscriptionJob']['TranscriptionJobStatus'] in ['COMPLETED', 'FAILED']:
             break
         #print("Not ready yet...")
