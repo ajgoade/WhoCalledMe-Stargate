@@ -110,7 +110,7 @@ def google_sentiment(jobid, transcript):
 def amazon_transcribe(audio_file_name, jobid):
     aws_uri = audio_file_name
     transcript = ''
-    jobname = str(jobid)+'_'+datetime.utcnow().strftime('%Y-%m-%d-%H:%M:%S.%f')[:-3]
+    jobname = str(jobid)+'_'+datetime.utcnow().strftime('%Y-%m-%d-%H.%M.%S.%f')[:-3]
 
     transcribe_client = boto3.client('transcribe',  region_name='us-east-1')
     transcribe_client.start_transcription_job(TranscriptionJobName=jobname, Media={'MediaFileUri': aws_uri},
