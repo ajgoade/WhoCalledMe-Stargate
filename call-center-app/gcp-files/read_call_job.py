@@ -121,11 +121,27 @@ def get_transactions():
     for row in rows:
         mediafileurl = row.call_link
         jobid = row.call_id
+        cloudlocation = mediafileurl.split(':')[0]
 
-        threading.Thread(target=google_transcribe,args=(mediafileurl, jobid)).start()
+        if cloudlocation == 'gs':
+            threading.Thread(target=google_transcribe,args=(mediafileurl, jobid)).start()
+            session.execute(
+                f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s where call_id={jobid}',
+                (datetime.utcnow(), 'transcribe_scheduled'))
+
+        elif cloudlocation == 's3':
+            print("s3 not available yet")
+            session.execute(
+                f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s where call_id={jobid}',
+                (datetime.utcnow(), 's3_unavailable'))
+
+        elif cloudlocation == 'wasbs':
+            print("wasbs not available yet")
+            session.execute(
+                f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s where call_id={jobid}',
+                (datetime.utcnow(), 'wasbs_unavailable'))
 
         #print("Job scheduled "+str(jobid)+" .....")
-        session.execute(f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s where call_id={jobid}',(datetime.utcnow(),'transcribe_scheduled'))
 
     session.shutdown()
 
