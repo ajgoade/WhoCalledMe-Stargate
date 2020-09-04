@@ -34,7 +34,7 @@ openAstra(astraSecureBundleFilePath, astraUser, astraUserPwd)
 
 
 function generateAccessToken(username) {
-    let token =  jwt.sign({sub_id: username}, process.env.TOKEN_SECRET, { expiresIn: '900s' });
+    let token =  jwt.sign({sub_id: username}, process.env.TOKEN_SECRET, { expiresIn: '1800s' });
     return token;
 }
 
