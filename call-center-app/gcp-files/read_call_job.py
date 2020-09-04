@@ -1,46 +1,20 @@
-#import pdb
 import threading
 import time
 from datetime import datetime
-# from pydub import AudioSegment
 from os import environ
-
+#Cassandra / Astra imports
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
-from google.cloud import speech
-from google.cloud.speech import types
-# from google.cloud import storage
 
-global mediafileurl
-global mediaformat
-global jobname
 secureconnect = ''
+cloudlocation = ''
 
-#def mp3_to_wav(audio_file_name):
-    #Not currently used
-#    if audio_file_name.split('.')[1] == 'mp3':
-#        sound = AudioSegment.from_mp3(audio_file_name)
-#        audio_file_name = audio_file_name.split('.')[0] + '.wav'
-#        sound.export(audio_file_name, format="wav")
-
-
-#def stereo_to_mono(audio_file_name):
-    #Not currently used
-#    sound = AudioSegment.from_wav(audio_file_name)
-#    sound = sound.set_channels(1)
-#    sound.export(audio_file_name, format="wav")
-
-
-#def frame_rate_channel(audio_file_name):
-    #Not currently used
-#    with wave.open(audio_file_name, "rb") as wave_file:
-#        frame_rate = wave_file.getframerate()
-#        channels = wave_file.getnchannels()
-#        return frame_rate, channels
 
 
 def google_transcribe(audio_file_name, jobid):
-   
+    from google.cloud import speech
+    from google.cloud.speech import types
+
     gcs_uri = audio_file_name
     transcript = ''
 
@@ -49,22 +23,21 @@ def google_transcribe(audio_file_name, jobid):
 
     config = types.RecognitionConfig(
         language_code='en-US')
-        
-    #print("Submitting transcribe job "+str(jobid)+" .....")
-    
-    # Detects speech in the audio file
+
     operation = client.long_running_recognize(config, audio)
     response = operation.result(timeout=10000)
-    #Uncomment to debug - pdb.set_trace()
+
     for result in response.results:
         transcript += result.alternatives[0].transcript
-    
-    #print("Writing transcript results for "+str(jobid)+" .....")
+
+    #Astra connection properties
     cloud_config = {'secure_connect_bundle': secureconnect}
     auth_provider = PlainTextAuthProvider('callcenter', 'datastax')
     cluster = Cluster(cloud=cloud_config, auth_provider=auth_provider)
     session = cluster.connect()
-    session.execute(f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s, transcript=%s where call_id={jobid}', (datetime.utcnow(), 'sentiment_needed', transcript))
+    session.execute(
+        f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s, transcript=%s where call_id={jobid}',
+        (datetime.utcnow(), 'gcp_sentiment_needed', transcript))
 
     threading.Thread(target=google_sentiment, args=(jobid, transcript)).start()
 
@@ -90,7 +63,63 @@ def google_sentiment(jobid, transcript):
     final_sentiment = 'Overall Sentiment: score of {:+.2f} with magnitude of {:+.2f}'.format(
         score, magnitude)
 
-    # print("Writing transcript results for "+str(jobid)+" .....")
+    #Astra connection properties
+    cloud_config = {'secure_connect_bundle': secureconnect}
+    auth_provider = PlainTextAuthProvider('callcenter', 'datastax')
+    cluster = Cluster(cloud=cloud_config, auth_provider=auth_provider)
+    session = cluster.connect()
+    session.execute(
+        f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s, sentiment=%s where call_id={jobid}',
+        (datetime.utcnow(), 'gcp_complete', final_sentiment))
+    session.shutdown()
+
+
+def amazon_transcribe(audio_file_name, jobid):
+    import boto3
+    import requests
+
+    aws_uri = audio_file_name
+    transcript = ''
+    jobname = str(jobid)+'_'+datetime.utcnow().strftime('%Y-%m-%d-%H.%M.%S.%f')[:-3]
+
+    transcribe_client = boto3.client('transcribe',  region_name='us-east-1')
+    transcribe_client.start_transcription_job(TranscriptionJobName=jobname, Media={'MediaFileUri': aws_uri},
+                                       MediaFormat='wav', LanguageCode='en-US')
+
+    while True:
+        status = transcribe_client.get_transcription_job(TranscriptionJobName=jobname)
+        if status['TranscriptionJob']['TranscriptionJobStatus'] in ['COMPLETED', 'FAILED']:
+            break
+        time.sleep(10)
+
+    response = requests.get(status['TranscriptionJob']['Transcript']['TranscriptFileUri']).json()
+    transcript = response['results']['transcripts'][0]['transcript']
+
+    #Astra connection properties
+    cloud_config = {'secure_connect_bundle': secureconnect}
+    auth_provider = PlainTextAuthProvider('callcenter', 'datastax')
+    cluster = Cluster(cloud=cloud_config, auth_provider=auth_provider)
+    session = cluster.connect()
+    session.execute(
+        f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s, transcript=%s where call_id={jobid}',
+        (datetime.utcnow(), 'aws_sentiment_needed', transcript))
+
+    threading.Thread(target=amazon_sentiment, args=(jobid, transcript)).start()
+
+    session.shutdown()
+
+
+def amazon_sentiment(jobid, transcript):
+    import boto3
+
+    comprehend = boto3.client(service_name='comprehend', region_name='us-east-1')
+
+    results = comprehend.detect_sentiment(Text=transcript, LanguageCode='en')
+
+    final_sentiment = 'Overall Sentiment is {}: Scores are Positive {:+.2f}, Negative {:+.2f}, Neutral {:+.2f}, and Mixed {:+.2f}'.format(
+        results['Sentiment'], results['SentimentScore']['Positive'], results['SentimentScore']['Negative'], results['SentimentScore']['Neutral'], results['SentimentScore']['Mixed'])
+
+    #Astra connection properties
     cloud_config = {'secure_connect_bundle': secureconnect}
     auth_provider = PlainTextAuthProvider('callcenter', 'datastax')
     cluster = Cluster(cloud=cloud_config, auth_provider=auth_provider)
@@ -98,34 +127,41 @@ def google_sentiment(jobid, transcript):
     session.execute(
         f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s, sentiment=%s where call_id={jobid}',
         (datetime.utcnow(), 'complete', final_sentiment))
-
     session.shutdown()
 
 
 def get_transactions():
-    # Connect to Astra and Run query
-    #print("Connecting to DataStax Astra .....")
-    cloud_config = {
-        'secure_connect_bundle': secureconnect
-    }
+
+    #Astra connection properties
+    cloud_config = {'secure_connect_bundle': secureconnect}
     auth_provider = PlainTextAuthProvider('callcenter', 'datastax')
     cluster = Cluster(cloud=cloud_config, auth_provider=auth_provider)
     session = cluster.connect()
 
-    # Load records to be transcribed
-    #print("Reading Data from Astra .....")
     rows = session.execute(
         "select call_id, call_link from callcenter.call_center_voice_source where process_status='new'")
-    
-    #Create thread for each transcribe job        
+
     for row in rows:
         mediafileurl = row.call_link
         jobid = row.call_id
 
-        threading.Thread(target=google_transcribe,args=(mediafileurl, jobid)).start()
+        if cloudlocation == 'gcp':
+            threading.Thread(target=google_transcribe,args=(mediafileurl, jobid)).start()
+            session.execute(
+                f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s where call_id={jobid}',
+                (datetime.utcnow(), 'gcp_transcribe_scheduled'))
 
-        #print("Job scheduled "+str(jobid)+" .....")
-        session.execute(f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s where call_id={jobid}',(datetime.utcnow(),'transcribe_scheduled'))
+        elif cloudlocation == 'aws':
+            threading.Thread(target=amazon_transcribe, args=(mediafileurl, jobid)).start()
+            session.execute(
+                f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s where call_id={jobid}',
+                (datetime.utcnow(), 'aws_transcribe_scheduled'))
+
+        elif cloudlocation == 'azure':
+            print("wasbs not available yet")
+            session.execute(
+                f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s where call_id={jobid}',
+                (datetime.utcnow(), 'azure_unavailable'))
 
     session.shutdown()
 
@@ -133,24 +169,27 @@ def get_transactions():
 def main():
     import argparse
     global secureconnect
+    global cloudlocation
 
-    #pdb.set_trace()
     parser = argparse.ArgumentParser()
-    parser.add_argument("--secure_connect", type=str, default="./secure-connect-gcp.zip",
+    parser.add_argument("--secure_connect", type=str, required=True,
                         help="Location of Astra secure connect package")
     parser.add_argument("--creds",type=str,
-                        help="Location of Cloud providor's connection package")
+                        help="Location of Cloud provider's connection package, if needed")
     parser.add_argument("--interval", type=int, default=60,
-                        help="Interval to pause before checking for new transactions")
+                        help="Interval to pause before checking for new transactions (default 60)")
+    parser.add_argument("--cloud", type=str, default='gcp', choices=['gcp', 'aws', 'azure'],
+                        help="Cloud provider app is running in: gcp (default), aws, azure")
     args = parser.parse_args()
     secureconnect = args.secure_connect
     waittime = args.interval
+    cloudlocation = args.cloud
+
     if args.creds is not None:
         environ["GOOGLE_APPLICATION_CREDENTIALS"] = args.creds
 
     while True:
         get_transactions()
-        #print("Waiting "+str(waittime)+".....")
         time.sleep(waittime)
 
 
