@@ -25,4 +25,17 @@ This micro-service
 
 You need to ensure you can connect to Astra correctly:
 
-- ENV vars to set credentails 
+- ENV vars to set credentials.  Please look at ./config/astraCreds.sh to see all the env vars to set and the files you
+will need to access Astra and GCP
+- Get the 'fieldops*.json' file from Andy Goade or Rajeev.
+- run 
+<code>
+sh ./buildDocker.sh
+</code>
+- run
+<code>
+sh ./runDocker.sh
+</code>
+- This will expose APIs on port 3030.
+
+
