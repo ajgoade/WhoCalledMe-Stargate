@@ -1,5 +1,6 @@
 
 docker container rm upload_client
+echo "Please connect to this docker instance on port 4201 for e.g. http://localhost:4201/login"
 #
 #
 #
