@@ -1,9 +1,12 @@
 const {Client} = require('cassandra-driver');
+const TimeUuid = require('cassandra-driver').types.TimeUuid;
+let moment = require('moment');
 let jwt = require('jsonwebtoken');
 let client;
 let astraUser = process.env.ASTRA_USER;
 let astraUserPwd = process.env.ASTRA_USER_PWD;
 let astraSecureBundleFilePath = process.env.ASTRA_SECURE_BUNDLE_FILE_PATH;
+
 let initFailure = false;
 
 ///////////////////////////////////////////////////////////////////////
@@ -34,7 +37,7 @@ openAstra(astraSecureBundleFilePath, astraUser, astraUserPwd)
 
 
 function generateAccessToken(username) {
-    let token =  jwt.sign({sub_id: username}, process.env.TOKEN_SECRET, { expiresIn: '900s' });
+    let token =  jwt.sign({sub_id: username}, process.env.TOKEN_SECRET, { expiresIn: '1800s' });
     return token;
 }
 
@@ -87,6 +90,73 @@ users = {
             next(req, res) // pass the execution off to whatever request the client intended
         });
     }, // authenticateToken
+
+
+    recordAudioFileLocation: function(audioFilePath) {
+
+        console.log('Astra registration for new file = ' + audioFilePath);
+        const id = TimeUuid.now();
+
+        let cql = 'INSERT into callcenter.call_center_voice_source ' +
+            '(call_id, call_audio_filetype, call_link, process_status, last_updated) ' +
+            'values (' +
+            id +
+            ', ' +
+            '\'wav\', ' +
+            '\'' + audioFilePath + '\', ' +
+            '\'new\', ' +
+            moment.now() +
+            ')'
+        ;
+
+        console.log(cql);
+
+        return client.execute(cql)
+            .then((retData) => {
+                console.debug(retData);
+                return ({
+                    id:id,
+                    success: true
+                });
+
+            }).catch((retData) => {
+                console.debug(retData);
+                throw new Error('could not upload file; err is ' + JSON.stringify(retData));
+            });
+    }, // ()
+
+
+    /*
+     * Use the ID to ask the server for the transcription...a transcription could take up to 3 minutes!
+     */
+    getAudioFileTranscription: function(req, res, next) {
+
+        let id = req.params.id;
+
+        let cql = 'SELECT * FROM  callcenter.call_center_voice_source ' +
+            ' WHERE call_id=' +
+            id;
+
+        console.log(cql);
+
+        return client.execute(cql)
+            .then((retData) => {
+                // console.debug(retData);
+                return res.status(200).send({
+                    id:id,
+                    data: retData.rows
+                });
+
+            }).catch((retData) => {
+                console.error(retData);
+                return res.status(403).send({
+                    code:20,
+                    message: 'Could not get transcription for audio file with id=' + id,
+                    errDetails: JSON.stringify(retData)
+                })
+            });
+    } // getAudioFileTranscription
+
 
 
 }; //users
