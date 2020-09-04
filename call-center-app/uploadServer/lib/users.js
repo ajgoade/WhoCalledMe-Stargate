@@ -1,4 +1,5 @@
 const {Client} = require('cassandra-driver');
+const TimeUuid = require('cassandra-driver').types.TimeUuid;
 let moment = require('moment');
 let jwt = require('jsonwebtoken');
 let client;
@@ -94,10 +95,14 @@ users = {
     recordAudioFileLocation: function(audioFilePath) {
 
         console.log('Astra registration for new file = ' + audioFilePath);
+        const id = TimeUuid.now();
 
         let cql = 'INSERT into callcenter.call_center_voice_source ' +
             '(call_id, call_audio_filetype, call_link, process_status, last_updated) ' +
-            'values (now(), \'wav\', ' +
+            'values (' +
+            id +
+            ', ' +
+            '\'wav\', ' +
             '\'' + audioFilePath + '\', ' +
             '\'new\', ' +
             moment.now() +
@@ -108,8 +113,11 @@ users = {
 
         return client.execute(cql)
             .then((retData) => {
-                // console.debug(retData);
-                return;
+                console.debug(retData);
+                return ({
+                    id:id,
+                    success: true
+                });
 
             }).catch((retData) => {
                 console.debug(retData);

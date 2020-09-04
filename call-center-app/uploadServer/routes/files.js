@@ -42,7 +42,8 @@ function acceptFileFromUser(req, res) {
                                     return res.status(200).send({
                                         status: true,
                                         code: 0,
-                                        message: "Success"
+                                        message: "Success",
+                                        id: retData.id
                                     });
 
                                 }).catch((errData) => {
