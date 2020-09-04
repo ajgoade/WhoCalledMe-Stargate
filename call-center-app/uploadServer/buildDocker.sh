@@ -1,2 +1,2 @@
-docker build -t call_center_uploader:1.0 .
+docker build -t call_center_uploader_server:1.0 .
 

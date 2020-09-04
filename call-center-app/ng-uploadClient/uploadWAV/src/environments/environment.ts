@@ -3,7 +3,11 @@
 // The list of file replacements can be found in `angular.json`.
 
 export const environment = {
-  production: false
+  production: false,
+  serverProtocol: 'http',
+  serverPort: 3030,
+  serverName: 'localhost',
+  myDockerPort: 80
 };
 
 /*

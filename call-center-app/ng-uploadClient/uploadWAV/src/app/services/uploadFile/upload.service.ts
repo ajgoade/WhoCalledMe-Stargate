@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { environment } from "../../../environments/environment";
 import {TokenStorageService} from "../tokenStorage/token-storage.service";
 
-const AUTH_API = 'http://localhost:3030/files/';
+const FILE_UPLOAD_API_ENDPOINT = environment.serverProtocol + '://' + environment.serverName + ':' +
+  environment.serverPort + '/files/';
 
 let httpOptions = {
 
@@ -31,7 +32,7 @@ export class UploadService {
       })
     };
 
-    return this.httpClient.post(AUTH_API, formData, httpOptions);
+    return this.httpClient.post(FILE_UPLOAD_API_ENDPOINT, formData, httpOptions);
 
   }
 

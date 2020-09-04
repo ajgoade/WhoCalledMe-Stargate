@@ -10,9 +10,9 @@ const {Storage} = require('@google-cloud/storage');
 // Creates a client
 const storage = new Storage();
 
-async function uploadFile(filename, bucketName) {
+function uploadFile(filename, bucketName) {
     // Uploads a local file to the bucket
-    await storage.bucket(bucketName).upload(filename, {
+    return storage.bucket(bucketName).upload(filename, {
         // Support for HTTP requests made with `Accept-Encoding: gzip`
         // gzip: true, --20200831 - ajgoade - Removed - Causing files to be unreadable
         // By setting the option `destination`, you can change the name of the
@@ -25,7 +25,6 @@ async function uploadFile(filename, bucketName) {
         },
     });
 
-    console.log(`${filename} uploaded to ${bucketName}.`);
 }
 
 
@@ -33,13 +32,15 @@ let gcp_storage_service;
 gcp_storage_service = {
     uploadFile: function (filePath, bucketName) {
         return uploadFile(filePath, bucketName)
-            .then((retData) => {
+            .then((retData)=> {
+                console.log(retData);
+                console.log(`${filePath} uploaded to ${bucketName}.`);
                 return true;
-            })
-            .catch((retData) => {
-                console.error(retData);
+            }).catch((errData)=> {
+                console.error(`${filePath} FAILED to upload to ${bucketName}.`);
+                console.error(false);
                 return false;
-            });
+            })
 
     },
 
