@@ -25,6 +25,7 @@ router.post('/', function(req,res, next) {
       .then((retData) => {
           if (retData.errCode != 0) {
               res.status(401).send('Login failed');
+              return;
           }
 
         res.status(200).send(retData);
