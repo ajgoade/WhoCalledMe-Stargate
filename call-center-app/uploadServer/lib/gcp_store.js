@@ -33,7 +33,7 @@ gcp_storage_service = {
     uploadFile: function (filePath, bucketName) {
         return uploadFile(filePath, bucketName)
             .then((retData)=> {
-                console.log(retData);
+                // console.log(retData);
                 console.log(`${filePath} uploaded to ${bucketName}.`);
                 return true;
             }).catch((errData)=> {

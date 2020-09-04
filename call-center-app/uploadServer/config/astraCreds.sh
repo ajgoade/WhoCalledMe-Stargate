@@ -1,6 +1,6 @@
 
 export GOOGLE_APPLICATION_CREDENTIALS="./gcpConfig/fieldops-gce-presales-a5ec0edbb261.json"
-
+export GOOGLE_STORAGE_BUCKET_NAME='astra_call_center'
 
 export ASTRA_USER='callcenter'
 export ASTRA_USER_PWD='datastax'

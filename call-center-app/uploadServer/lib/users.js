@@ -1,9 +1,11 @@
 const {Client} = require('cassandra-driver');
+let moment = require('moment');
 let jwt = require('jsonwebtoken');
 let client;
 let astraUser = process.env.ASTRA_USER;
 let astraUserPwd = process.env.ASTRA_USER_PWD;
 let astraSecureBundleFilePath = process.env.ASTRA_SECURE_BUNDLE_FILE_PATH;
+
 let initFailure = false;
 
 ///////////////////////////////////////////////////////////////////////
@@ -88,6 +90,34 @@ users = {
         });
     }, // authenticateToken
 
+
+    recordAudioFileLocation: function(audioFilePath) {
+
+        console.log('Astra registration for new file = ' + audioFilePath);
+
+        let cql = 'INSERT into callcenter.call_center_voice_source ' +
+            '(call_id, call_audio_filetype, call_link, process_status, last_updated) ' +
+            'values (now(), \'wav\', ' +
+            '\'' + audioFilePath + '\', ' +
+            '\'new\', ' +
+            moment.now() +
+            ')'
+        ;
+
+        console.log(cql);
+
+        return client.execute(cql)
+            .then((retData) => {
+                // console.debug(retData);
+                return;
+
+            }).catch((retData) => {
+                console.debug(retData);
+                throw new Error('could not upload file; err is ' + JSON.stringify(retData));
+            });
+
+
+    }
 
 }; //users
 
