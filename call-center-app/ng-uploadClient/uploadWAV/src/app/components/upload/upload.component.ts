@@ -4,6 +4,7 @@ import * as  moment  from 'moment';
 import {DomSanitizer} from "@angular/platform-browser";
 import {UploadService} from "../../services/uploadFile/upload.service";
 import {UserService} from "../../services/user/user.service";
+import {GetTranscriptionService} from "../../services/getTranscription/get-transcription.service";
 
 
 @Component({
@@ -13,7 +14,18 @@ import {UserService} from "../../services/user/user.service";
 })
 export class UploadComponent implements OnInit {
 
+  speech = {
+    id: 0,
+    transcription: '',
+    sentiment: '',
+    localFileUrl: '',
+    status: 'none',
+    remoteUrl : '',
+    timeUpdated: ''
+  };
 
+  showTranscription = false;
+  pollingHandler=null;
   //Lets declare Record OBJ
   record;//Will use this flag for toggling recording
   recording = false;//URL of Blob
@@ -22,7 +34,8 @@ export class UploadComponent implements OnInit {
 
   constructor(private domSanitizer: DomSanitizer,
               private uploadService : UploadService,
-              private userService: UserService ) {
+              private userService: UserService,
+              private getTranscriptionService: GetTranscriptionService) {
   }
 
   ngOnInit(): void {
@@ -36,6 +49,11 @@ export class UploadComponent implements OnInit {
    * Start recording.
    */
   initiateRecording() {
+    this.showTranscription = false;
+    if (this.pollingHandler) {
+      clearTimeout(this.pollingHandler);
+    };
+
     this.recording = true;
     let mediaConstraints = {
       video: false,
@@ -71,9 +89,33 @@ export class UploadComponent implements OnInit {
    * @param  {any} blob Blog
    */
   processRecording(blob) {
+
+    this.showTranscription = true;
+    this.speech = {
+      id: 0,
+      transcription: '',
+      sentiment: '',
+      status: 'Prep to upload',
+      localFileUrl: this.url,
+      timeUpdated: '',
+      remoteUrl: ''
+    };
+
+
     this.url = URL.createObjectURL(blob);
     console.log("blob", blob);
     console.log("url", this.url);
+
+
+    this.speech = {
+      id: 0,
+      transcription: '',
+      sentiment: '',
+      status: 'Uploading file...',
+      localFileUrl: '',
+      remoteUrl: '',
+      timeUpdated: ''
+    };
 
 
     this.uploadService.uploadFile(blob, this.userService.getUserName(),
@@ -81,6 +123,10 @@ export class UploadComponent implements OnInit {
       .subscribe((retData) => {
           console.log('upload completed');
           console.log(retData);
+
+          let id = retData['id'];
+          this.pollForUpdates(id);
+
         },
         (errData) => {
           console.error(errData);
@@ -96,5 +142,40 @@ export class UploadComponent implements OnInit {
   errorCallback(error) {
     this.error = 'Can not play audio in your browser';
   }
+
+  pollForUpdates(id) {
+
+    this.getTranscriptionService.getDetails(id)
+      .subscribe((retData) => {
+        console.log(retData);
+        let data = retData['data'][0];
+        let id = data['call_id'];
+        let remoteUrl = data['call_link'];
+        let lastUpdated = data['last_updated'];
+        let transcription = data['transcription'];
+        let sentiment = data['sentiment'];
+
+        this.speech = {
+          id: id,
+          transcription: transcription,
+          sentiment: sentiment,
+          status: 'File Uploaded',
+          localFileUrl: this.url,
+          remoteUrl: remoteUrl,
+          timeUpdated: lastUpdated
+        };
+
+        if (this.speech.status != 'complete') {
+          this.pollingHandler = setTimeout(handler => {
+              return this.pollForUpdates(id);
+            }, 2000);
+        }
+
+      }, error1 => {
+
+        this.error = JSON.stringify(error1);
+      });
+
+  } // pollforUpdates
 
 }
