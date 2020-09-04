@@ -70,11 +70,18 @@ function acceptFileFromUser(req, res) {
     }
 }
 
-/* GET users listing. */
+/* POST users listing. */
 router.post('/', function(req, res, next) {
 
     (userService.authenticateToken(req,res, acceptFileFromUser));
 
+});
+
+/* POST users listing. */
+router.get('/:id', function(req, res, next) {
+    console.log('ID:', req.params.id);
+
+    (userService.authenticateToken(req,res, userService.getAudioFileTranscription));
 
 
 });

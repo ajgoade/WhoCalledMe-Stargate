@@ -123,9 +123,41 @@ users = {
                 console.debug(retData);
                 throw new Error('could not upload file; err is ' + JSON.stringify(retData));
             });
+    }, // ()
 
 
-    }
+    /*
+     * Use the ID to ask the server for the transcription...a transcription could take up to 3 minutes!
+     */
+    getAudioFileTranscription: function(req, res, next) {
+
+        let id = req.params.id;
+
+        let cql = 'SELECT * FROM  callcenter.call_center_voice_source ' +
+            ' WHERE call_id=' +
+            id;
+
+        console.log(cql);
+
+        return client.execute(cql)
+            .then((retData) => {
+                // console.debug(retData);
+                return res.status(200).send({
+                    id:id,
+                    data: retData.rows
+                });
+
+            }).catch((retData) => {
+                console.error(retData);
+                return res.status(403).send({
+                    code:20,
+                    message: 'Could not get transcription for audio file with id=' + id,
+                    errDetails: JSON.stringify(retData)
+                })
+            });
+    } // getAudioFileTranscription
+
+
 
 }; //users
 
