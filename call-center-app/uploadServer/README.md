@@ -8,6 +8,10 @@ The idea is that the customer's dialog allows the enterprise to direct the call 
 1. Hey, I have a problem with my internet!  It is down right now!!!
 1. I want to upgrade my internet service
 
+# Change history
+
+## 2020.09.09
+The status check was using the wrong field and values.  Change the UI to be a little 'cleaner.'
 
 # This service
 
