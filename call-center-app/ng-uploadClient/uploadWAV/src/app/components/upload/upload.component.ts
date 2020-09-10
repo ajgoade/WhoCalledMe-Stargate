@@ -152,23 +152,29 @@ export class UploadComponent implements OnInit {
         let id = data['call_id'];
         let remoteUrl = data['call_link'];
         let lastUpdated = data['last_updated'];
-        let transcription = data['transcription'];
+        let transcription = data['transcript'];
         let sentiment = data['sentiment'];
+        let status = data['process_status'];
 
         this.speech = {
           id: id,
           transcription: transcription,
           sentiment: sentiment,
-          status: 'File Uploaded',
+          status: status,
           localFileUrl: this.url,
           remoteUrl: remoteUrl,
           timeUpdated: lastUpdated
         };
 
-        if (this.speech.status != 'complete') {
+        if (this.speech.status != 'gcp_complete') {
+          console.log(this.speech.status + ' is the status and continue the polling');
           this.pollingHandler = setTimeout(handler => {
               return this.pollForUpdates(id);
             }, 2000);
+        } else {
+          console.log(this.speech.status + ' is the status and we are clearing timeout');
+            clearTimeout(this.pollingHandler);
+            return;
         }
 
       }, error1 => {
