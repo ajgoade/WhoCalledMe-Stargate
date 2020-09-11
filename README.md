@@ -1,16 +1,19 @@
-# astra_demos
-temporary repo for storing and collaborating on all Astra Demos for the technical field team
+# Intro
 
-**Create a NEW folder for every new use case and sub-folders for tasks/components in each use case**
+This project simulates a call center app.  The goal is to show the 
+consumption of the cloud provider's resources that Astra based applications
+would consume.
 
-## Call Center App
+## HLA
+![](Images/Call_Centre_App-HLA.png)
 
-We want to simulate a customer interacting with an IVR system and
-that speech is captured as a WAV file.  The file is placed on S3, 
-Astra is used to track it, a AWS transcription service is used to 
-convert it to text, and Astra is updated with the text.
 
-Yes, an EC2, AWS Lambda, or K8s docker container resource will be
-needed as the middleware to track the above.
+## How is this different than using Dynamodb, BigTable, Cosmos
+Good question.  It's not.
 
- 
+The question is focused on other DBs can also show demand for the 
+cloud provider's services.  That is true and this demo doesn't create
+an advantage that DataStax can express....when presented independently
+of the Astra narrative around zero lock-in, freedom of choice, massive
+scale, etc.
+
