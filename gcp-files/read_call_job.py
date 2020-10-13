@@ -2,14 +2,97 @@ import threading
 import time
 from datetime import datetime
 from os import environ
-#Cassandra / Astra imports
-from cassandra.auth import PlainTextAuthProvider
-from cassandra.cluster import Cluster
 
-secureconnect = ''
+import requests              # for making REST API requests
+import json                  # for converting json payloads to strings
+import uuid                  # to create UUIDs for Astra connections
+
 cloudlocation = ''
+AUTH_UUID = str(uuid.uuid1())
+USER = ''
+PASSWORD = ''
+DB_ID = ''
+REGION = ''
+BASE_URL = ''
+NAMESPACE = 'callcenter'
+COLLECTION = 'calls'
+DOC_ROOT_PATH = f"/api/rest/v2/namespaces/{NAMESPACE}/collections/{COLLECTION}/"
+TOKEN = ''
+HEADERS = ''
+stargate_client = ''
 
 
+class Client:
+    """
+    An API Client for connecting to Stargate
+    """
+
+    def __init__(self, base_url, access_token, headers):
+        self.base_url = base_url
+        self.access_token = access_token
+        self.headers = headers
+
+    def post(self, payload={}, path=""):
+        """
+            Via the requests library, performs a post with the payload to the path
+        """
+        return requests.post(self.base_url + path,
+                             data=json.dumps(payload),
+                             headers=self.headers)
+
+    def put(self, payload={}, path=""):
+        """
+            Via the requests library, performs a put with the payload to the path
+        """
+        return requests.put(self.base_url + path,
+                            data=json.dumps(payload),
+                            headers=self.headers)
+
+    def patch(self, payload={}, path=""):
+        """
+            Via the requests library, performs a patch with the payload to the path
+        """
+        return requests.patch(self.base_url + path,
+                              data=json.dumps(payload),
+                              headers=self.headers)
+
+    def get(self, payload={}, path=""):
+        """
+            Via the requests library, performs a get with the payload to the path
+        """
+        return requests.get(self.base_url + path,
+                            data=json.dumps(payload),
+                            headers=self.headers)
+
+    def delete(self, payload={}, path=""):
+        """
+            Via the requests library, performs a delete with the payload to the path
+        """
+        return requests.delete(self.base_url + path,
+                               data=json.dumps(payload),
+                               headers=self.headers)
+
+def authenticate(path="/api/rest/v1/auth"):
+    """
+        This convenience function uses the v1 auth REST API to get an access token
+        returns: an auth token; 30 minute expiration
+    """
+    url = BASE_URL + path # we still have to auth with the v1 API
+    payload = {"username": USER,
+               "password": PASSWORD}
+    headers = {'accept': '*/*',
+               'content-type': 'application/json',
+               'x-cassandra-request-id': AUTH_UUID}
+    # make auth request to Astra
+    r = requests.post(url,
+                      data=json.dumps(payload),
+                      headers=headers)
+    # raise any authentication errror
+    if r.status_code != 201:
+        raise Exception(r.text)
+    # extract and return the auth token
+    data = json.loads(r.text)
+    return data["authToken"]
 
 def google_transcribe(audio_file_name, jobid):
     from google.cloud import speech
@@ -30,18 +113,13 @@ def google_transcribe(audio_file_name, jobid):
     for result in response.results:
         transcript += result.alternatives[0].transcript
 
-    #Astra connection properties
-    cloud_config = {'secure_connect_bundle': secureconnect}
-    auth_provider = PlainTextAuthProvider('callcenter', 'datastax')
-    cluster = Cluster(cloud=cloud_config, auth_provider=auth_provider)
-    session = cluster.connect()
-    session.execute(
-        f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s, transcript=%s where call_id={jobid}',
-        (datetime.utcnow(), 'gcp_sentiment_needed', transcript))
+    stargate_client.patch({"lastUpdated":datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                         "transcript":transcript,
+                         "processStatus":"gcp_sentiment_needed"},
+                        DOC_ROOT_PATH + jobid)
 
     threading.Thread(target=google_sentiment, args=(jobid, transcript)).start()
 
-    session.shutdown()
 
 
 def google_sentiment(jobid, transcript):
@@ -63,16 +141,10 @@ def google_sentiment(jobid, transcript):
     final_sentiment = 'Overall Sentiment: score of {:+.2f} with magnitude of {:+.2f}'.format(
         score, magnitude)
 
-    #Astra connection properties
-    cloud_config = {'secure_connect_bundle': secureconnect}
-    auth_provider = PlainTextAuthProvider('callcenter', 'datastax')
-    cluster = Cluster(cloud=cloud_config, auth_provider=auth_provider)
-    session = cluster.connect()
-    session.execute(
-        f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s, sentiment=%s where call_id={jobid}',
-        (datetime.utcnow(), 'gcp_complete', final_sentiment))
-    session.shutdown()
-
+    stargate_client.patch({"lastUpdated":datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                         "sentiment":final_sentiment,
+                         "processStatus":"complete"},
+                        DOC_ROOT_PATH + jobid)
 
 def amazon_transcribe(audio_file_name, jobid):
     import boto3
@@ -95,19 +167,13 @@ def amazon_transcribe(audio_file_name, jobid):
     response = requests.get(status['TranscriptionJob']['Transcript']['TranscriptFileUri']).json()
     transcript = response['results']['transcripts'][0]['transcript']
 
-    #Astra connection properties
-    cloud_config = {'secure_connect_bundle': secureconnect}
-    auth_provider = PlainTextAuthProvider('callcenter', 'datastax')
-    cluster = Cluster(cloud=cloud_config, auth_provider=auth_provider)
-    session = cluster.connect()
-    session.execute(
-        f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s, transcript=%s where call_id={jobid}',
-        (datetime.utcnow(), 'aws_sentiment_needed', transcript))
+    stargate_client.patch({"lastUpdated":datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                         "transcript":transcript,
+                         "processStatus":"aws_sentiment_needed"},
+                        DOC_ROOT_PATH + jobid)
+
 
     threading.Thread(target=amazon_sentiment, args=(jobid, transcript)).start()
-
-    session.shutdown()
-
 
 def amazon_sentiment(jobid, transcript):
     import boto3
@@ -119,71 +185,79 @@ def amazon_sentiment(jobid, transcript):
     final_sentiment = 'Overall Sentiment is {}: Scores are Positive {:+.2f}, Negative {:+.2f}, Neutral {:+.2f}, and Mixed {:+.2f}'.format(
         results['Sentiment'], results['SentimentScore']['Positive'], results['SentimentScore']['Negative'], results['SentimentScore']['Neutral'], results['SentimentScore']['Mixed'])
 
-    #Astra connection properties
-    cloud_config = {'secure_connect_bundle': secureconnect}
-    auth_provider = PlainTextAuthProvider('callcenter', 'datastax')
-    cluster = Cluster(cloud=cloud_config, auth_provider=auth_provider)
-    session = cluster.connect()
-    session.execute(
-        f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s, sentiment=%s where call_id={jobid}',
-        (datetime.utcnow(), 'complete', final_sentiment))
-    session.shutdown()
-
+    stargate_client.patch({"lastUpdated":datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                         "sentiment":final_sentiment,
+                         "processStatus":"complete"},
+                        DOC_ROOT_PATH + jobid)
 
 def get_transactions():
 
-    #Astra connection properties
-    cloud_config = {'secure_connect_bundle': secureconnect}
-    auth_provider = PlainTextAuthProvider('callcenter', 'datastax')
-    cluster = Cluster(cloud=cloud_config, auth_provider=auth_provider)
-    session = cluster.connect()
+    #Stargate connection properties
+    rows = stargate_client.get({}, DOC_ROOT_PATH+'?page-size=20&where={"processStatus": {"$eq": "new"}}')
+    results = json.loads(rows.text)
 
-    rows = session.execute(
-        "select call_id, call_link from callcenter.call_center_voice_source where process_status='new'")
+    for data, key in results.items():
+        if(key is not None):
+            for subdata, subkey in key.items():
+                jobid = subdata
+                mediafileurl = subkey['callLink']
 
-    for row in rows:
-        mediafileurl = row.call_link
-        jobid = row.call_id
+                if cloudlocation == 'gcp':
+                    threading.Thread(target=google_transcribe,args=(mediafileurl, jobid)).start()
+                    stargate_client.patch({"lastUpdated": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                                       "processStatus": "gcp_transcribe_scheduled"},
+                                      DOC_ROOT_PATH + jobid)
 
-        if cloudlocation == 'gcp':
-            threading.Thread(target=google_transcribe,args=(mediafileurl, jobid)).start()
-            session.execute(
-                f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s where call_id={jobid}',
-                (datetime.utcnow(), 'gcp_transcribe_scheduled'))
+                elif cloudlocation == 'aws':
+                    threading.Thread(target=amazon_transcribe, args=(mediafileurl, jobid)).start()
+                    stargate_client.patch({"lastUpdated": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                                       "processStatus": "aws_transcribe_scheduled"},
+                                      DOC_ROOT_PATH + jobid)
 
-        elif cloudlocation == 'aws':
-            threading.Thread(target=amazon_transcribe, args=(mediafileurl, jobid)).start()
-            session.execute(
-                f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s where call_id={jobid}',
-                (datetime.utcnow(), 'aws_transcribe_scheduled'))
-
-        elif cloudlocation == 'azure':
-            print("wasbs not available yet")
-            session.execute(
-                f'update callcenter.call_center_voice_source set last_updated=%s, process_status=%s where call_id={jobid}',
-                (datetime.utcnow(), 'azure_unavailable'))
-
-    session.shutdown()
-
+                elif cloudlocation == 'azure':
+                    print("wasbs not available yet")
 
 def main():
     import argparse
-    global secureconnect
+    global USER
+    global PASSWORD
+    global DB_ID
+    global REGION
     global cloudlocation
+    global TOKEN
+    global stargate_client
+    global BASE_URL
+    global HEADERS
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--secure_connect", type=str, required=True,
-                        help="Location of Astra secure connect package")
-    parser.add_argument("--creds",type=str,
-                        help="Location of Cloud provider's connection package, if needed")
+    parser.add_argument("--user", type=str, default='astra',
+                        help="Astra user id")
+    parser.add_argument("--password",type=str, default='datastax',
+                        help="Astra password")
+    parser.add_argument("--db_id", type=str, default='4f9900e9-dcb5-4a78-bb59-c9f28a1a8a6c',
+                        help="Astra Database ID")
+    parser.add_argument("--region", type=str, default='us-east1',
+                        help="Astra DB region")
     parser.add_argument("--interval", type=int, default=60,
-                        help="Interval to pause before checking for new transactions (default 60)")
+                        help="Time to rest between processes")
     parser.add_argument("--cloud", type=str, default='gcp', choices=['gcp', 'aws', 'azure'],
                         help="Cloud provider app is running in: gcp (default), aws, azure")
+    parser.add_argument("--creds", type=str,
+                        help="Location of Cloud provider's connection package, if needed")
+
     args = parser.parse_args()
-    secureconnect = args.secure_connect
+    USER = args.user
+    PASSWORD = args.password
+    DB_ID = args.db_id
+    REGION = args.region
     waittime = args.interval
     cloudlocation = args.cloud
+    BASE_URL = f"https://{DB_ID}-{REGION}.apps.astra.datastax.com"
+
+    TOKEN = authenticate()
+    HEADERS = {'content-type': 'application/json',
+               'x-cassandra-token': TOKEN}
+    stargate_client = Client(BASE_URL, TOKEN, HEADERS)
 
     if args.creds is not None:
         environ["GOOGLE_APPLICATION_CREDENTIALS"] = args.creds
