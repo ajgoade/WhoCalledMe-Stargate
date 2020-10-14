@@ -94,6 +94,13 @@ def authenticate(path="/api/rest/v1/auth"):
     data = json.loads(r.text)
     return data["authToken"]
 
+def initialize_stargate():
+    global stargate_client
+    TOKEN = authenticate()
+    HEADERS = {'content-type': 'application/json',
+               'x-cassandra-token': TOKEN}
+    stargate_client = Client(BASE_URL, TOKEN, HEADERS)
+
 def google_transcribe(audio_file_name, jobid):
     from google.cloud import speech
     from google.cloud.speech import types
@@ -119,8 +126,6 @@ def google_transcribe(audio_file_name, jobid):
                         DOC_ROOT_PATH + jobid)
 
     threading.Thread(target=google_sentiment, args=(jobid, transcript)).start()
-
-
 
 def google_sentiment(jobid, transcript):
     from google.cloud import language
@@ -192,53 +197,50 @@ def amazon_sentiment(jobid, transcript):
 
 def get_transactions():
 
-    #Stargate connection properties
     rows = stargate_client.get({}, DOC_ROOT_PATH+'?page-size=20&where={"processStatus": {"$eq": "new"}}')
-    results = json.loads(rows.text)
 
-    for data, key in results.items():
-        if(key is not None):
-            for subdata, subkey in key.items():
-                jobid = subdata
-                mediafileurl = subkey['callLink']
+    if rows.status_code == 200:
 
-                if cloudlocation == 'gcp':
-                    threading.Thread(target=google_transcribe,args=(mediafileurl, jobid)).start()
-                    stargate_client.patch({"lastUpdated": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-                                       "processStatus": "gcp_transcribe_scheduled"},
-                                      DOC_ROOT_PATH + jobid)
+        results = json.loads(rows.text)
 
-                elif cloudlocation == 'aws':
-                    threading.Thread(target=amazon_transcribe, args=(mediafileurl, jobid)).start()
-                    stargate_client.patch({"lastUpdated": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
-                                       "processStatus": "aws_transcribe_scheduled"},
-                                      DOC_ROOT_PATH + jobid)
+        for data, key in results.items():
+            if (key is not None):
+                for subdata, subkey in key.items():
+                    jobid = subdata
+                    mediafileurl = subkey['callLink']
 
-                elif cloudlocation == 'azure':
-                    print("wasbs not available yet")
+                    if cloudlocation == 'gcp':
+                        threading.Thread(target=google_transcribe, args=(mediafileurl, jobid)).start()
+                        stargate_client.patch({"lastUpdated": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                                               "processStatus": "gcp_transcribe_scheduled"},
+                                              DOC_ROOT_PATH + jobid)
+
+                    elif cloudlocation == 'aws':
+                        threading.Thread(target=amazon_transcribe, args=(mediafileurl, jobid)).start()
+                        stargate_client.patch({"lastUpdated": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                                               "processStatus": "aws_transcribe_scheduled"},
+                                              DOC_ROOT_PATH + jobid)
+
+                    elif cloudlocation == 'azure':
+                        print("wasbs not available yet")
+
+    elif rows.status_code == 401:
+        initialize_stargate()
 
 def main():
     import argparse
-    global USER
-    global PASSWORD
-    global DB_ID
-    global REGION
-    global cloudlocation
-    global TOKEN
-    global stargate_client
-    global BASE_URL
-    global HEADERS
+    global USER, PASSWORD, DB_ID, REGION, cloudlocation, TOKEN, stargate_client, BASE_URL, HEADERS
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--user", type=str, default='astra',
+    parser.add_argument("-u", "--user", type=str, required=true,
                         help="Astra user id")
-    parser.add_argument("--password",type=str, default='datastax',
+    parser.add_argument("-p", "--password",type=str, required=true,
                         help="Astra password")
-    parser.add_argument("--db_id", type=str, default='4f9900e9-dcb5-4a78-bb59-c9f28a1a8a6c',
+    parser.add_argument("--db_id", type=str, required=true,
                         help="Astra Database ID")
-    parser.add_argument("--region", type=str, default='us-east1',
+    parser.add_argument("--region", type=str, required=true,
                         help="Astra DB region")
-    parser.add_argument("--interval", type=int, default=60,
+    parser.add_argument("-i", "--interval", type=int, default=60,
                         help="Time to rest between processes")
     parser.add_argument("--cloud", type=str, default='gcp', choices=['gcp', 'aws', 'azure'],
                         help="Cloud provider app is running in: gcp (default), aws, azure")
@@ -254,18 +256,14 @@ def main():
     cloudlocation = args.cloud
     BASE_URL = f"https://{DB_ID}-{REGION}.apps.astra.datastax.com"
 
-    TOKEN = authenticate()
-    HEADERS = {'content-type': 'application/json',
-               'x-cassandra-token': TOKEN}
-    stargate_client = Client(BASE_URL, TOKEN, HEADERS)
-
     if args.creds is not None:
         environ["GOOGLE_APPLICATION_CREDENTIALS"] = args.creds
+
+    initialize_stargate()
 
     while True:
         get_transactions()
         time.sleep(waittime)
-
 
 if __name__ == "__main__":
     main()
