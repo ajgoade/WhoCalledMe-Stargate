@@ -120,7 +120,7 @@ def google_transcribe(audio_file_name, jobid):
     for result in response.results:
         transcript += result.alternatives[0].transcript
 
-    stargate_client.patch({"lastUpdated":datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+    stargate_client.patch({"lastUpdated":int(time.time()),
                          "transcript":transcript,
                          "processStatus":"gcp_sentiment_needed"},
                         DOC_ROOT_PATH + jobid)
@@ -146,7 +146,7 @@ def google_sentiment(jobid, transcript):
     final_sentiment = 'Overall Sentiment: score of {:+.2f} with magnitude of {:+.2f}'.format(
         score, magnitude)
 
-    stargate_client.patch({"lastUpdated":datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+    stargate_client.patch({"lastUpdated":int(time.time()),
                          "sentiment":final_sentiment,
                          "processStatus":"complete"},
                         DOC_ROOT_PATH + jobid)
@@ -172,7 +172,7 @@ def amazon_transcribe(audio_file_name, jobid):
     response = requests.get(status['TranscriptionJob']['Transcript']['TranscriptFileUri']).json()
     transcript = response['results']['transcripts'][0]['transcript']
 
-    stargate_client.patch({"lastUpdated":datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+    stargate_client.patch({"lastUpdated":int(time.time()),
                          "transcript":transcript,
                          "processStatus":"aws_sentiment_needed"},
                         DOC_ROOT_PATH + jobid)
@@ -190,7 +190,7 @@ def amazon_sentiment(jobid, transcript):
     final_sentiment = 'Overall Sentiment is {}: Scores are Positive {:+.2f}, Negative {:+.2f}, Neutral {:+.2f}, and Mixed {:+.2f}'.format(
         results['Sentiment'], results['SentimentScore']['Positive'], results['SentimentScore']['Negative'], results['SentimentScore']['Neutral'], results['SentimentScore']['Mixed'])
 
-    stargate_client.patch({"lastUpdated":datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+    stargate_client.patch({"lastUpdated":int(time.time()),
                          "sentiment":final_sentiment,
                          "processStatus":"complete"},
                         DOC_ROOT_PATH + jobid)
@@ -211,13 +211,13 @@ def get_transactions():
 
                     if cloudlocation == 'gcp':
                         threading.Thread(target=google_transcribe, args=(mediafileurl, jobid)).start()
-                        stargate_client.patch({"lastUpdated": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                        stargate_client.patch({"lastUpdated": int(time.time()),
                                                "processStatus": "gcp_transcribe_scheduled"},
                                               DOC_ROOT_PATH + jobid)
 
                     elif cloudlocation == 'aws':
                         threading.Thread(target=amazon_transcribe, args=(mediafileurl, jobid)).start()
-                        stargate_client.patch({"lastUpdated": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+                        stargate_client.patch({"lastUpdated": int(time.time()),
                                                "processStatus": "aws_transcribe_scheduled"},
                                               DOC_ROOT_PATH + jobid)
 
@@ -232,13 +232,13 @@ def main():
     global USER, PASSWORD, DB_ID, REGION, cloudlocation, TOKEN, stargate_client, BASE_URL, HEADERS
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-u", "--user", type=str, required=true,
+    parser.add_argument("-u", "--user", type=str, required=True,
                         help="Astra user id")
-    parser.add_argument("-p", "--password",type=str, required=true,
+    parser.add_argument("-p", "--password",type=str, required=True,
                         help="Astra password")
-    parser.add_argument("--db_id", type=str, required=true,
+    parser.add_argument("--db_id", type=str, required=True,
                         help="Astra Database ID")
-    parser.add_argument("--region", type=str, required=true,
+    parser.add_argument("--region", type=str, required=True,
                         help="Astra DB region")
     parser.add_argument("-i", "--interval", type=int, default=60,
                         help="Time to rest between processes")
